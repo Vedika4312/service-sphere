@@ -18,6 +18,8 @@ export type Database = {
         Row: {
           created_at: string
           customer_id: string
+          customer_latitude: number | null
+          customer_longitude: number | null
           id: string
           notes: string | null
           provider_id: string
@@ -29,6 +31,8 @@ export type Database = {
         Insert: {
           created_at?: string
           customer_id: string
+          customer_latitude?: number | null
+          customer_longitude?: number | null
           id?: string
           notes?: string | null
           provider_id: string
@@ -40,6 +44,8 @@ export type Database = {
         Update: {
           created_at?: string
           customer_id?: string
+          customer_latitude?: number | null
+          customer_longitude?: number | null
           id?: string
           notes?: string | null
           provider_id?: string
@@ -103,6 +109,7 @@ export type Database = {
           conversation_id: string
           created_at: string
           id: string
+          is_read: boolean
           sender_id: string
         }
         Insert: {
@@ -110,6 +117,7 @@ export type Database = {
           conversation_id: string
           created_at?: string
           id?: string
+          is_read?: boolean
           sender_id: string
         }
         Update: {
@@ -117,6 +125,7 @@ export type Database = {
           conversation_id?: string
           created_at?: string
           id?: string
+          is_read?: boolean
           sender_id?: string
         }
         Relationships: [
@@ -158,6 +167,51 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      reviews: {
+        Row: {
+          booking_id: string
+          comment: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          provider_id: string
+          rating: number
+        }
+        Insert: {
+          booking_id: string
+          comment?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          provider_id: string
+          rating: number
+        }
+        Update: {
+          booking_id?: string
+          comment?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          provider_id?: string
+          rating?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       service_providers: {
         Row: {
