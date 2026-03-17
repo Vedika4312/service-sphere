@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { type ProviderWithDetails, type ServiceCategory } from '@/types/provider';
-import { LocateFixed } from 'lucide-react';
+
 
 const categoryColors: Record<ServiceCategory, string> = {
   plumber: '#3b82f6',
