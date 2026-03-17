@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          notes: string | null
+          provider_id: string
+          scheduled_at: string | null
+          service_id: string | null
+          status: Database["public"]["Enums"]["booking_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          notes?: string | null
+          provider_id: string
+          scheduled_at?: string | null
+          service_id?: string | null
+          status?: Database["public"]["Enums"]["booking_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          notes?: string | null
+          provider_id?: string
+          scheduled_at?: string | null
+          service_id?: string | null
+          status?: Database["public"]["Enums"]["booking_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -151,6 +202,12 @@ export type Database = {
     }
     Enums: {
       app_role: "customer" | "provider"
+      booking_status:
+        | "pending"
+        | "accepted"
+        | "rejected"
+        | "completed"
+        | "cancelled"
       service_category: "plumber" | "cook" | "drycleaner" | "electrician"
     }
     CompositeTypes: {
@@ -280,6 +337,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["customer", "provider"],
+      booking_status: [
+        "pending",
+        "accepted",
+        "rejected",
+        "completed",
+        "cancelled",
+      ],
       service_category: ["plumber", "cook", "drycleaner", "electrician"],
     },
   },
