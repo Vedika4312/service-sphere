@@ -166,7 +166,7 @@ const Chat = () => {
     const convo = conversations.find(c => c.id === activeConvo);
     return (
       <PageTransition>
-        <div className="h-[100dvh] flex flex-col">
+        <div className="h-[100dvh] pb-16 flex flex-col">
           <div className="flex-shrink-0 px-4 py-3 border-b border-border bg-background/80 backdrop-blur-xl flex items-center gap-3">
             <button onClick={() => { setActiveConvo(null); queryClient.invalidateQueries({ queryKey: ['conversations'] }); }} className="p-2 -ml-2 rounded-xl hover:bg-secondary min-h-[44px] min-w-[44px] flex items-center justify-center">
               <ArrowLeft className="h-5 w-5" />
