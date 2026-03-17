@@ -1,4 +1,4 @@
-import { CalendarDays, Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { CalendarDays, Clock, CheckCircle2, XCircle, Loader2, MessageCircle } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,6 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import ReviewDialog from '@/components/ReviewDialog';
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: typeof Clock }> = {
   pending: { label: 'Pending', variant: 'secondary', icon: Clock },
@@ -18,6 +21,8 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
 
 const Bookings = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [reviewBooking, setReviewBooking] = useState<any>(null);
 
   const { data: bookings = [], isLoading, refetch } = useQuery({
     queryKey: ['bookings', user?.id],
@@ -30,17 +35,24 @@ const Bookings = () => {
         .order('created_at', { ascending: false });
       if (error) throw error;
 
-      // Fetch provider profiles
       const userIds = [...new Set((data || []).map(b => (b.service_providers as any)?.user_id).filter(Boolean))];
       const { data: profiles } = userIds.length > 0
         ? await supabase.from('profiles').select('*').in('user_id', userIds)
         : { data: [] };
       const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
 
+      // Fetch existing reviews for completed bookings
+      const completedIds = (data || []).filter(b => b.status === 'completed').map(b => b.id);
+      const { data: reviews } = completedIds.length > 0
+        ? await supabase.from('reviews').select('booking_id').in('booking_id', completedIds)
+        : { data: [] };
+      const reviewedSet = new Set((reviews || []).map(r => r.booking_id));
+
       return (data || []).map(b => ({
         ...b,
         providerName: profileMap.get((b.service_providers as any)?.user_id)?.full_name || 'Provider',
         serviceName: (b.services as any)?.name,
+        hasReview: reviewedSet.has(b.id),
       }));
     },
   });
@@ -56,6 +68,11 @@ const Bookings = () => {
       toast.success('Booking cancelled');
       refetch();
     }
+  };
+
+  const handleChat = async (providerId: string) => {
+    // Navigate to chat - the conversation should already exist
+    navigate('/chat', { state: { openProviderId: providerId } });
   };
 
   return (
@@ -100,22 +117,56 @@ const Bookings = () => {
                   <p className="text-xs text-muted-foreground">
                     Booked {format(new Date(b.created_at), 'MMM d, yyyy h:mm a')}
                   </p>
-                  {b.status === 'pending' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-destructive border-destructive/20 rounded-lg"
-                      onClick={() => handleCancel(b.id)}
-                    >
-                      Cancel
-                    </Button>
-                  )}
+                  <div className="flex gap-2 pt-1">
+                    {b.status === 'pending' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive border-destructive/20 rounded-lg"
+                        onClick={() => handleCancel(b.id)}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                    {b.status === 'accepted' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg"
+                        onClick={() => handleChat(b.provider_id)}
+                      >
+                        <MessageCircle className="h-3.5 w-3.5 mr-1" />
+                        Chat
+                      </Button>
+                    )}
+                    {b.status === 'completed' && !b.hasReview && (
+                      <Button
+                        size="sm"
+                        className="rounded-lg"
+                        onClick={() => setReviewBooking(b)}
+                      >
+                        Leave Review
+                      </Button>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {reviewBooking && (
+        <ReviewDialog
+          open={!!reviewBooking}
+          onOpenChange={(open) => !open && setReviewBooking(null)}
+          bookingId={reviewBooking.id}
+          providerId={reviewBooking.provider_id}
+          providerName={reviewBooking.providerName}
+          customerId={user!.id}
+          onReviewed={() => refetch()}
+        />
+      )}
     </PageTransition>
   );
 };

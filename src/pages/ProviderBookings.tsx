@@ -1,17 +1,21 @@
-import { Loader2, Inbox } from 'lucide-react';
+import { Loader2, Inbox, MessageCircle, Eye } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import BookingDetailDialog from '@/components/BookingDetailDialog';
 
 const ProviderBookings = () => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [detailBooking, setDetailBooking] = useState<any>(null);
 
   const { data: provider } = useQuery({
     queryKey: ['my-provider', user?.id],
@@ -66,6 +70,10 @@ const ProviderBookings = () => {
       toast.success(`Booking ${status}`);
       refetch();
     }
+  };
+
+  const handleChat = (customerId: string) => {
+    navigate('/chat', { state: { openCustomerId: customerId } });
   };
 
   const statusColor = (s: string) => {
@@ -164,11 +172,23 @@ const ProviderBookings = () => {
                         <p className="text-xs text-muted-foreground">
                           {format(new Date(b.created_at), 'MMM d, yyyy h:mm a')}
                         </p>
-                        {b.status === 'accepted' && (
-                          <Button size="sm" variant="outline" className="rounded-xl w-full mt-1" onClick={() => handleAction(b.id, 'completed')}>
-                            Mark Completed
-                          </Button>
-                        )}
+                        <div className="flex gap-2 pt-1">
+                          {b.status === 'accepted' && (
+                            <>
+                              <Button size="sm" variant="outline" className="rounded-xl" onClick={() => handleChat(b.customer_id)}>
+                                <MessageCircle className="h-3.5 w-3.5 mr-1" />
+                                Chat
+                              </Button>
+                              <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setDetailBooking(b)}>
+                                <Eye className="h-3.5 w-3.5 mr-1" />
+                                View Details
+                              </Button>
+                              <Button size="sm" variant="outline" className="rounded-xl" onClick={() => handleAction(b.id, 'completed')}>
+                                Mark Completed
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
@@ -178,6 +198,18 @@ const ProviderBookings = () => {
           </>
         )}
       </div>
+
+      {detailBooking && (
+        <BookingDetailDialog
+          open={!!detailBooking}
+          onOpenChange={(open) => !open && setDetailBooking(null)}
+          customerName={detailBooking.customerName}
+          customerPhone={detailBooking.customerPhone}
+          serviceName={detailBooking.serviceName}
+          latitude={detailBooking.customer_latitude}
+          longitude={detailBooking.customer_longitude}
+        />
+      )}
     </PageTransition>
   );
 };
