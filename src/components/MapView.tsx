@@ -105,7 +105,7 @@ const MapView = ({ providers, onMarkerClick, selectedId }: MapViewProps) => {
       },
     });
 
-    const control = new LocateControl({ position: 'bottomright' });
+    const control = new LocateControl({ position: 'topright' });
     control.addTo(map);
 
     return () => { map.removeControl(control); };
