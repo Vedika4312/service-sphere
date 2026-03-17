@@ -8,16 +8,23 @@ const BottomNav = () => {
   const navigate = useNavigate();
   const { user, role } = useAuth();
 
-  // Hide on auth page
   if (location.pathname === '/auth') return null;
 
-  const navItems = [
+  const customerItems = [
     { path: '/', label: 'Explore', icon: Compass },
     { path: '/bookings', label: 'Bookings', icon: CalendarDays },
     { path: '/chat', label: 'Chat', icon: MessageCircle },
-    ...(role === 'provider' ? [{ path: '/provider/dashboard', label: 'Dashboard', icon: LayoutDashboard }] : []),
     { path: user ? '/profile' : '/auth', label: user ? 'Profile' : 'Sign In', icon: User },
   ];
+
+  const providerItems = [
+    { path: '/provider/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/provider/bookings', label: 'Bookings', icon: CalendarDays },
+    { path: '/chat', label: 'Chat', icon: MessageCircle },
+    { path: '/profile', label: 'Profile', icon: User },
+  ];
+
+  const navItems = role === 'provider' ? providerItems : customerItems;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-t border-border safe-area-bottom">

@@ -1,4 +1,4 @@
-import { User, Settings, LogOut, ChevronRight, LayoutDashboard } from 'lucide-react';
+import { User, Settings, LogOut, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PageTransition from '@/components/PageTransition';
 import { Button } from '@/components/ui/button';
@@ -48,18 +48,6 @@ const Profile = () => {
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
-            {role === 'provider' && (
-              <button
-                onClick={() => navigate('/provider/dashboard')}
-                className="w-full flex items-center justify-between p-4 rounded-xl hover:bg-secondary transition-colors min-h-[52px]"
-              >
-                <div className="flex items-center gap-3">
-                  <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-sm font-medium">Provider Dashboard</span>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </button>
-            )}
           </div>
 
           <Button
