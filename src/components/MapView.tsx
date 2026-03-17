@@ -88,6 +88,29 @@ const MapView = ({ providers, onMarkerClick, selectedId }: MapViewProps) => {
     }
   }, [selectedId, providers]);
 
+  // Add locate button as a Leaflet control inside the map
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current;
+
+    const LocateControl = L.Control.extend({
+      onAdd: function () {
+        const btn = L.DomUtil.create('button', '');
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M2 12h2"/><path d="M20 12h2"/></svg>`;
+        btn.title = 'My Location';
+        btn.style.cssText = 'width:34px;height:34px;background:white;border:2px solid rgba(0,0,0,0.2);border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+        L.DomEvent.disableClickPropagation(btn);
+        btn.addEventListener('click', () => handleLocateMe());
+        return btn;
+      },
+    });
+
+    const control = new LocateControl({ position: 'bottomright' });
+    control.addTo(map);
+
+    return () => { map.removeControl(control); };
+  }, []);
+
   const handleLocateMe = () => {
     if (!mapRef.current || !navigator.geolocation) return;
     setLocating(true);
