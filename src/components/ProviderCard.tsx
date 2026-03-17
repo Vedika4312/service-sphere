@@ -1,10 +1,10 @@
 import { Star, MapPin } from 'lucide-react';
-import { type MockProvider } from '@/data/mockProviders';
+import { type ProviderWithDetails } from '@/types/provider';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 interface ProviderCardProps {
-  provider: MockProvider;
+  provider: ProviderWithDetails;
   onClick?: () => void;
 }
 
@@ -28,7 +28,7 @@ const ProviderCard = ({ provider, onClick }: ProviderCardProps) => {
         <div className="flex items-center gap-2 mt-0.5">
           <div className="flex items-center gap-0.5">
             <Star className="h-3.5 w-3.5 fill-[hsl(var(--warning))] text-[hsl(var(--warning))]" />
-            <span className="text-xs font-medium">{provider.rating}</span>
+            <span className="text-xs font-medium">{provider.rating.toFixed(1)}</span>
             <span className="text-xs text-muted-foreground">({provider.reviewCount})</span>
           </div>
           <span className="text-muted-foreground text-xs">•</span>
@@ -43,7 +43,9 @@ const ProviderCard = ({ provider, onClick }: ProviderCardProps) => {
               {s}
             </Badge>
           ))}
-          <span className="text-xs font-semibold text-primary ml-auto whitespace-nowrap">₹{provider.hourlyRate}/hr</span>
+          {provider.hourlyRate > 0 && (
+            <span className="text-xs font-semibold text-primary ml-auto whitespace-nowrap">₹{provider.hourlyRate}/hr</span>
+          )}
         </div>
       </div>
     </button>

@@ -1,15 +1,47 @@
 import { Star, MapPin, Clock, X } from 'lucide-react';
-import { type MockProvider } from '@/data/mockProviders';
+import { type ProviderWithDetails } from '@/types/provider';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 
 interface ProviderDetailProps {
-  provider: MockProvider;
+  provider: ProviderWithDetails;
   onClose: () => void;
   onBook: () => void;
 }
 
 const ProviderDetail = ({ provider, onClose, onBook }: ProviderDetailProps) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [booking, setBooking] = useState(false);
+
+  const handleBook = async () => {
+    if (!user) {
+      toast.error('Please sign in to book');
+      navigate('/auth');
+      return;
+    }
+    setBooking(true);
+    try {
+      const { error } = await supabase.from('bookings').insert({
+        customer_id: user.id,
+        provider_id: provider.id,
+      });
+      if (error) throw error;
+      toast.success('Booking request sent!');
+      onBook();
+    } catch (err: any) {
+      toast.error(err.message || 'Booking failed');
+    } finally {
+      setBooking(false);
+    }
+  };
+
   return (
     <div className="p-5 space-y-4">
       <div className="flex items-start justify-between">
@@ -21,7 +53,7 @@ const ProviderDetail = ({ provider, onClose, onBook }: ProviderDetailProps) => {
             <h2 className="font-semibold text-lg">{provider.name}</h2>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Star className="h-3.5 w-3.5 fill-[hsl(var(--warning))] text-[hsl(var(--warning))]" />
-              <span className="font-medium text-foreground">{provider.rating}</span>
+              <span className="font-medium text-foreground">{provider.rating.toFixed(1)}</span>
               <span>({provider.reviewCount} reviews)</span>
             </div>
           </div>
@@ -36,27 +68,32 @@ const ProviderDetail = ({ provider, onClose, onBook }: ProviderDetailProps) => {
           <MapPin className="h-4 w-4" />
           {provider.distance}
         </div>
-        <div className="flex items-center gap-1">
-          <Clock className="h-4 w-4" />
-          ₹{provider.hourlyRate}/hr
-        </div>
+        {provider.hourlyRate > 0 && (
+          <div className="flex items-center gap-1">
+            <Clock className="h-4 w-4" />
+            ₹{provider.hourlyRate}/hr
+          </div>
+        )}
         <Badge variant={provider.isOnline ? 'default' : 'secondary'} className="text-xs">
           {provider.isOnline ? 'Online' : 'Offline'}
         </Badge>
       </div>
 
-      <div>
-        <h3 className="text-sm font-semibold mb-2">Services</h3>
-        <div className="flex flex-wrap gap-2">
-          {provider.services.map((s) => (
-            <Badge key={s} variant="secondary" className="rounded-lg px-3 py-1">
-              {s}
-            </Badge>
-          ))}
+      {provider.services.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold mb-2">Services</h3>
+          <div className="flex flex-wrap gap-2">
+            {provider.services.map((s) => (
+              <Badge key={s} variant="secondary" className="rounded-lg px-3 py-1">
+                {s}
+              </Badge>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      <Button onClick={onBook} size="lg" className="w-full rounded-xl h-12 text-base font-semibold">
+      <Button onClick={handleBook} size="lg" className="w-full rounded-xl h-12 text-base font-semibold" disabled={booking}>
+        {booking && <Loader2 className="h-4 w-4 animate-spin" />}
         Book Now
       </Button>
     </div>

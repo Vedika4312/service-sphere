@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { type MockProvider, type ServiceCategory } from '@/data/mockProviders';
+import { type ProviderWithDetails, type ServiceCategory } from '@/types/provider';
 
 const categoryColors: Record<ServiceCategory, string> = {
   plumber: '#3b82f6',
@@ -28,8 +28,8 @@ function createMarkerIcon(category: ServiceCategory) {
 }
 
 interface MapViewProps {
-  providers: MockProvider[];
-  onMarkerClick?: (provider: MockProvider) => void;
+  providers: ProviderWithDetails[];
+  onMarkerClick?: (provider: ProviderWithDetails) => void;
   selectedId?: string | null;
 }
 

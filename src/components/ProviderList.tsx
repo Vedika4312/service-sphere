@@ -1,11 +1,11 @@
-import { type MockProvider } from '@/data/mockProviders';
+import { type ProviderWithDetails } from '@/types/provider';
 import ProviderCard from './ProviderCard';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface ProviderListProps {
-  providers: MockProvider[];
+  providers: ProviderWithDetails[];
   loading?: boolean;
-  onProviderClick?: (provider: MockProvider) => void;
+  onProviderClick?: (provider: ProviderWithDetails) => void;
 }
 
 const ProviderListSkeleton = () => (
