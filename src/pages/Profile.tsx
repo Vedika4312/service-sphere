@@ -1,4 +1,4 @@
-import { User, Settings, LogOut, ChevronRight, LayoutDashboard } from 'lucide-react';
+import { User, Settings, LogOut, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PageTransition from '@/components/PageTransition';
 import { Button } from '@/components/ui/button';
