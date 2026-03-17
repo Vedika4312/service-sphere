@@ -138,11 +138,10 @@ const MapView = ({ providers, onMarkerClick, selectedId }: MapViewProps) => {
     );
   };
 
-  return (
-    <div className="relative w-full h-full">
-      <div ref={containerRef} className="w-full h-full" />
-      <button
-        onClick={handleLocateMe}
+  return <div ref={containerRef} className="w-full h-full" />;
+};
+
+export default MapView;
         disabled={locating}
         className="absolute bottom-4 right-4 z-[1000] w-10 h-10 rounded-full bg-background border border-border shadow-lg flex items-center justify-center hover:bg-secondary transition-colors"
         title="My Location"
