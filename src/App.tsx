@@ -7,6 +7,7 @@ import { AnimatePresence } from "framer-motion";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import BottomNav from "@/components/BottomNav";
+import AIChatbot from "@/components/AIChatbot";
 import Explore from "./pages/Explore";
 import Bookings from "./pages/Bookings";
 import Chat from "./pages/Chat";
@@ -53,6 +54,7 @@ const App = () => (
         <AuthProvider>
           <AnimatedRoutes />
           <BottomNav />
+          <AIChatbot />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
