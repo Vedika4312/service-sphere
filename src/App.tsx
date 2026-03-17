@@ -54,6 +54,7 @@ const App = () => (
         <AuthProvider>
           <AnimatedRoutes />
           <BottomNav />
+          <AIChatbot />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
