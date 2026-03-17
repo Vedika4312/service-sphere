@@ -28,9 +28,24 @@ const ProviderDetail = ({ provider, onClose, onBook }: ProviderDetailProps) => {
     }
     setBooking(true);
     try {
+      // Get customer location
+      let customerLat: number | null = null;
+      let customerLng: number | null = null;
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 5000 })
+        );
+        customerLat = pos.coords.latitude;
+        customerLng = pos.coords.longitude;
+      } catch {
+        // Location not available, proceed without it
+      }
+
       const { error } = await supabase.from('bookings').insert({
         customer_id: user.id,
         provider_id: provider.id,
+        customer_latitude: customerLat,
+        customer_longitude: customerLng,
       });
       if (error) throw error;
 

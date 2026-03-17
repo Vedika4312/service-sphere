@@ -2,11 +2,32 @@ import { Compass, CalendarDays, MessageCircle, User, LayoutDashboard } from 'luc
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, role } = useAuth();
+
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['unread-count', user?.id],
+    enabled: !!user,
+    refetchInterval: 10000,
+    queryFn: async () => {
+      // Get conversations for this user
+      const { data: convos } = await supabase.from('conversations').select('id');
+      if (!convos?.length) return 0;
+      const convoIds = convos.map(c => c.id);
+      const { count } = await supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .in('conversation_id', convoIds)
+        .neq('sender_id', user!.id)
+        .eq('is_read', false);
+      return count || 0;
+    },
+  });
 
   if (location.pathname === '/auth') return null;
 
@@ -31,16 +52,24 @@ const BottomNav = () => {
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
+          const showBadge = item.path === '/chat' && unreadCount > 0;
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
               className={cn(
-                'flex flex-col items-center justify-center gap-0.5 min-w-[48px] min-h-[48px] rounded-xl transition-colors',
+                'relative flex flex-col items-center justify-center gap-0.5 min-w-[48px] min-h-[48px] rounded-xl transition-colors',
                 isActive ? 'text-primary' : 'text-muted-foreground'
               )}
             >
-              <item.icon className="h-5 w-5" strokeWidth={isActive ? 2.5 : 2} />
+              <div className="relative">
+                <item.icon className="h-5 w-5" strokeWidth={isActive ? 2.5 : 2} />
+                {showBadge && (
+                  <span className="absolute -top-1.5 -right-2 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] flex items-center justify-center font-bold">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </div>
               <span className="text-[10px] font-medium">{item.label}</span>
             </button>
           );

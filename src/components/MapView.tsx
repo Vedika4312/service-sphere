@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { type ProviderWithDetails, type ServiceCategory } from '@/types/provider';
+import { LocateFixed } from 'lucide-react';
 
 const categoryColors: Record<ServiceCategory, string> = {
   plumber: '#3b82f6',
@@ -37,6 +38,8 @@ const MapView = ({ providers, onMarkerClick, selectedId }: MapViewProps) => {
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<L.Marker[]>([]);
+  const userMarkerRef = useRef<L.Marker | null>(null);
+  const [locating, setLocating] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -85,7 +88,46 @@ const MapView = ({ providers, onMarkerClick, selectedId }: MapViewProps) => {
     }
   }, [selectedId, providers]);
 
-  return <div ref={containerRef} className="w-full h-full" />;
+  const handleLocateMe = () => {
+    if (!mapRef.current || !navigator.geolocation) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        if (userMarkerRef.current) userMarkerRef.current.remove();
+
+        const icon = L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="width:20px;height:20px;border-radius:50%;background:hsl(217,91%,60%);border:3px solid white;box-shadow:0 0 10px rgba(59,130,246,0.5);"></div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10],
+        });
+
+        userMarkerRef.current = L.marker([latitude, longitude], { icon })
+          .addTo(mapRef.current!)
+          .bindTooltip('You are here', { direction: 'top', offset: [0, -12] });
+
+        mapRef.current!.flyTo([latitude, longitude], 15, { duration: 0.8 });
+        setLocating(false);
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true }
+    );
+  };
+
+  return (
+    <div className="relative w-full h-full">
+      <div ref={containerRef} className="w-full h-full" />
+      <button
+        onClick={handleLocateMe}
+        disabled={locating}
+        className="absolute bottom-4 right-4 z-[1000] w-10 h-10 rounded-full bg-background border border-border shadow-lg flex items-center justify-center hover:bg-secondary transition-colors"
+        title="My Location"
+      >
+        <LocateFixed className={`h-5 w-5 ${locating ? 'animate-pulse text-primary' : 'text-foreground'}`} />
+      </button>
+    </div>
+  );
 };
 
 export default MapView;

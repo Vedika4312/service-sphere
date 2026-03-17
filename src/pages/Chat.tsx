@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { useLocation } from 'react-router-dom';
 
 interface ConversationWithDetails {
   id: string;
@@ -15,17 +16,18 @@ interface ConversationWithDetails {
   updated_at: string;
   otherName: string;
   lastMessage?: string;
+  unreadCount: number;
 }
 
 const Chat = () => {
   const { user, role } = useAuth();
   const queryClient = useQueryClient();
+  const locationState = useLocation().state as any;
   const [activeConvo, setActiveConvo] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch conversations
   const { data: conversations = [], isLoading: convosLoading } = useQuery({
     queryKey: ['conversations', user?.id],
     enabled: !!user,
@@ -36,7 +38,6 @@ const Chat = () => {
         .order('updated_at', { ascending: false });
       if (error) throw error;
 
-      // Fetch names for the other party
       const customerIds = [...new Set((data || []).map(c => c.customer_id))];
       const providerIds = [...new Set((data || []).map(c => c.provider_id))];
 
@@ -58,15 +59,19 @@ const Chat = () => {
         providerMap.set(p.id, profile?.full_name || 'Provider');
       });
 
-      // Fetch last message per conversation
       const convoIds = (data || []).map(c => c.id);
-      const { data: lastMessages } = convoIds.length > 0
+      const { data: allMessages } = convoIds.length > 0
         ? await supabase.from('messages').select('*').in('conversation_id', convoIds).order('created_at', { ascending: false })
         : { data: [] };
+
       const lastMsgMap = new Map<string, string>();
-      (lastMessages || []).forEach(m => {
+      const unreadMap = new Map<string, number>();
+      (allMessages || []).forEach(m => {
         if (!lastMsgMap.has(m.conversation_id)) {
           lastMsgMap.set(m.conversation_id, m.content);
+        }
+        if (m.sender_id !== user?.id && !m.is_read) {
+          unreadMap.set(m.conversation_id, (unreadMap.get(m.conversation_id) || 0) + 1);
         }
       });
 
@@ -76,11 +81,23 @@ const Chat = () => {
           ? profileMap.get(c.customer_id) || 'Customer'
           : providerMap.get(c.provider_id) || 'Provider',
         lastMessage: lastMsgMap.get(c.id),
+        unreadCount: unreadMap.get(c.id) || 0,
       })) as ConversationWithDetails[];
     },
   });
 
-  // Fetch messages for active conversation
+  // Auto-open conversation from navigation state
+  useEffect(() => {
+    if (!conversations.length) return;
+    if (locationState?.openProviderId) {
+      const convo = conversations.find(c => c.provider_id === locationState.openProviderId);
+      if (convo) setActiveConvo(convo.id);
+    } else if (locationState?.openCustomerId) {
+      const convo = conversations.find(c => c.customer_id === locationState.openCustomerId);
+      if (convo) setActiveConvo(convo.id);
+    }
+  }, [conversations, locationState]);
+
   const { data: messages = [], refetch: refetchMessages } = useQuery({
     queryKey: ['messages', activeConvo],
     enabled: !!activeConvo,
@@ -95,25 +112,33 @@ const Chat = () => {
     },
   });
 
-  // Realtime subscription for messages
+  // Mark messages as read when opening conversation
+  useEffect(() => {
+    if (!activeConvo || !user) return;
+    const markRead = async () => {
+      await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('conversation_id', activeConvo)
+        .neq('sender_id', user.id)
+        .eq('is_read', false);
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+    };
+    markRead();
+  }, [activeConvo, user, messages.length]);
+
   useEffect(() => {
     if (!activeConvo) return;
-
     const channel = supabase
       .channel(`messages-${activeConvo}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConvo}` },
-        () => {
-          refetchMessages();
-        }
-      )
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConvo}` }, () => {
+        refetchMessages();
+      })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [activeConvo, refetchMessages]);
 
-  // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -128,26 +153,20 @@ const Chat = () => {
     });
     if (!error) {
       setMessageText('');
-      // Update conversation updated_at
       await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConvo);
     }
     setSending(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
-  // Message thread view
   if (activeConvo) {
     const convo = conversations.find(c => c.id === activeConvo);
     return (
       <PageTransition>
         <div className="h-[100dvh] flex flex-col">
-          {/* Header */}
           <div className="flex-shrink-0 px-4 py-3 border-b border-border bg-background/80 backdrop-blur-xl flex items-center gap-3">
             <button onClick={() => { setActiveConvo(null); queryClient.invalidateQueries({ queryKey: ['conversations'] }); }} className="p-2 -ml-2 rounded-xl hover:bg-secondary min-h-[44px] min-w-[44px] flex items-center justify-center">
               <ArrowLeft className="h-5 w-5" />
@@ -160,7 +179,6 @@ const Chat = () => {
             </div>
           </div>
 
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
             {messages.map((m) => {
               const isMe = m.sender_id === user?.id;
@@ -178,16 +196,9 @@ const Chat = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
           <div className="flex-shrink-0 p-3 border-t border-border bg-background/80 backdrop-blur-xl safe-area-bottom">
             <div className="flex gap-2">
-              <Input
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Type a message..."
-                className="rounded-xl"
-              />
+              <Input value={messageText} onChange={(e) => setMessageText(e.target.value)} onKeyDown={handleKeyDown} placeholder="Type a message..." className="rounded-xl" />
               <Button size="icon" className="rounded-xl shrink-0" onClick={handleSend} disabled={sending || !messageText.trim()}>
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
@@ -198,7 +209,6 @@ const Chat = () => {
     );
   }
 
-  // Conversation list view
   return (
     <PageTransition>
       <div className="min-h-[100dvh] pb-20">
@@ -231,18 +241,23 @@ const Chat = () => {
                 onClick={() => setActiveConvo(c.id)}
                 className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-secondary transition-colors text-left"
               >
-                <div className="w-11 h-11 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold shrink-0">
+                <div className="relative w-11 h-11 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold shrink-0">
                   {c.otherName[0].toUpperCase()}
+                  {c.unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold">
+                      {c.unreadCount > 9 ? '9+' : c.unreadCount}
+                    </span>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <p className="font-medium text-sm">{c.otherName}</p>
+                    <p className={`text-sm ${c.unreadCount > 0 ? 'font-bold' : 'font-medium'}`}>{c.otherName}</p>
                     <p className="text-[10px] text-muted-foreground">
                       {format(new Date(c.updated_at), 'MMM d')}
                     </p>
                   </div>
                   {c.lastMessage && (
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">{c.lastMessage}</p>
+                    <p className={`text-xs truncate mt-0.5 ${c.unreadCount > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>{c.lastMessage}</p>
                   )}
                 </div>
               </button>
