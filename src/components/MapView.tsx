@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { type ProviderWithDetails, type ServiceCategory } from '@/types/provider';
-import { LocateFixed } from 'lucide-react';
+
 
 const categoryColors: Record<ServiceCategory, string> = {
   plumber: '#3b82f6',
@@ -88,6 +88,29 @@ const MapView = ({ providers, onMarkerClick, selectedId }: MapViewProps) => {
     }
   }, [selectedId, providers]);
 
+  // Add locate button as a Leaflet control inside the map
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current;
+
+    const LocateControl = L.Control.extend({
+      onAdd: function () {
+        const btn = L.DomUtil.create('button', '');
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M2 12h2"/><path d="M20 12h2"/></svg>`;
+        btn.title = 'My Location';
+        btn.style.cssText = 'width:34px;height:34px;background:white;border:2px solid rgba(0,0,0,0.2);border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+        L.DomEvent.disableClickPropagation(btn);
+        btn.addEventListener('click', () => handleLocateMe());
+        return btn;
+      },
+    });
+
+    const control = new LocateControl({ position: 'bottomright' });
+    control.addTo(map);
+
+    return () => { map.removeControl(control); };
+  }, []);
+
   const handleLocateMe = () => {
     if (!mapRef.current || !navigator.geolocation) return;
     setLocating(true);
@@ -115,19 +138,7 @@ const MapView = ({ providers, onMarkerClick, selectedId }: MapViewProps) => {
     );
   };
 
-  return (
-    <div className="relative w-full h-full">
-      <div ref={containerRef} className="w-full h-full" />
-      <button
-        onClick={handleLocateMe}
-        disabled={locating}
-        className="absolute bottom-4 right-4 z-[1000] w-10 h-10 rounded-full bg-background border border-border shadow-lg flex items-center justify-center hover:bg-secondary transition-colors"
-        title="My Location"
-      >
-        <LocateFixed className={`h-5 w-5 ${locating ? 'animate-pulse text-primary' : 'text-foreground'}`} />
-      </button>
-    </div>
-  );
+  return <div ref={containerRef} className="w-full h-full" />;
 };
 
 export default MapView;
