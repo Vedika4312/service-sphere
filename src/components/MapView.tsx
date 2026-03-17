@@ -142,14 +142,3 @@ const MapView = ({ providers, onMarkerClick, selectedId }: MapViewProps) => {
 };
 
 export default MapView;
-        disabled={locating}
-        className="absolute bottom-4 right-4 z-[1000] w-10 h-10 rounded-full bg-background border border-border shadow-lg flex items-center justify-center hover:bg-secondary transition-colors"
-        title="My Location"
-      >
-        <LocateFixed className={`h-5 w-5 ${locating ? 'animate-pulse text-primary' : 'text-foreground'}`} />
-      </button>
-    </div>
-  );
-};
-
-export default MapView;
