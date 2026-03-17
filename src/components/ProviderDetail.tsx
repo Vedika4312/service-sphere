@@ -33,6 +33,21 @@ const ProviderDetail = ({ provider, onClose, onBook }: ProviderDetailProps) => {
         provider_id: provider.id,
       });
       if (error) throw error;
+
+      // Create or get conversation
+      const { data: existing } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('customer_id', user.id)
+        .eq('provider_id', provider.id)
+        .maybeSingle();
+      if (!existing) {
+        await supabase.from('conversations').insert({
+          customer_id: user.id,
+          provider_id: provider.id,
+        });
+      }
+
       toast.success('Booking request sent!');
       onBook();
     } catch (err: any) {
